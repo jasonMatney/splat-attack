@@ -55,6 +55,15 @@ def sample_rate(duration, preset):
     return min(preset['fps'], preset['max_frames'] / duration)
 
 
+def memory_budget():
+    try:
+        if sys.platform == 'darwin':
+            return int(subprocess.check_output(['/usr/sbin/sysctl', '-n', 'hw.memsize'], stderr=subprocess.DEVNULL))
+        return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
 def ffmpeg_command(video, images, info, config):
     limit = config['resolution']
     filters = [f"fps={sample_rate(info['duration'], config):.8f}"]
@@ -111,6 +120,11 @@ def run(video, output, preset='office', steps=None, min_registered=12, min_ratio
         raise ValueError('Output folder already exists. Choose a new folder to protect earlier results.')
     output.mkdir(parents=True)
     config = dict(PRESETS[preset])
+    config['train_resolution'] = config['resolution']
+    ram = memory_budget()
+    if ram is not None and ram <= 8 * 1024**3:
+        config['train_resolution'] = min(config['resolution'], 768)
+        config['splats'] = min(config['splats'], 250000)
     if steps is not None:
         if steps < 1:
             raise ValueError('Training steps must be positive.')
@@ -118,6 +132,8 @@ def run(video, output, preset='office', steps=None, min_registered=12, min_ratio
     state = dict(status='running', stage='prepare', source=str(video), video=info,
                  preset=preset, config=config, started=time.time(), output=str(output),
                  versions={'pycolmap': pc.__version__, 'brush': '0.3.0'}, warnings=[], allow_partial=allow_partial)
+    if config['train_resolution'] != config['resolution']:
+        state['warnings'].append('8 GB memory mode: training at 768 px with a 250,000 splat cap. Fine detail will be reduced.')
     log = (output / 'pipeline.log').open('a', buffering=1)
 
     def emit(stage, message, **fields):
@@ -132,7 +148,7 @@ def run(video, output, preset='office', steps=None, min_registered=12, min_ratio
     def cancelled(signum, frame):
         raise KeyboardInterrupt
 
-    signal.signal(signal.SIGTERM, cancelled)
+    previous_handler = signal.signal(signal.SIGTERM, cancelled)
     try:
         emit('extract', 'Extracting frames across the full video')
         images = output / 'images'; images.mkdir()
@@ -212,14 +228,23 @@ def run(video, output, preset='office', steps=None, min_registered=12, min_ratio
         emit('train', f"Training {config['steps']:,} steps on your GPU; this can take a while")
         export_every = 1000 if config['steps'] % 1000 == 0 else config['steps']
         command([brush, str(dataset), '--total-steps', str(config['steps']),
-                 '--max-resolution', str(config['resolution']), '--max-splats', str(config['splats']),
+                 '--max-resolution', str(config['train_resolution']), '--max-splats', str(config['splats']),
                  '--growth-stop-iter', str(max(1, int(config['steps'] * 0.75))),
                  '--export-every', str(export_every), '--export-path', str(exports),
                  '--export-name', 'office.ply'])
         result = exports / 'office.ply'
         splats = inspect_splat(result)
+        raw_result = result
+        try:
+            from .view_export import orient_for_viewer
+            viewing = exports / 'office-view.ply'
+            transform = orient_for_viewer(result, viewing, dataset / 'sparse/0')
+            write_json(exports / 'view-transform.json', transform)
+            result = viewing
+        except (ValueError, OSError) as error:
+            state['warnings'].append(f'Could not create the initial viewing orientation: {error}. Original export retained.')
         ready_message = f'Partial scene ready: only {registered}/{count} views reconstructed' if state['partial'] else 'Your splat is ready to open'
-        emit('complete', ready_message, status='complete', result=str(result),
+        emit('complete', ready_message, status='complete', result=str(result), raw_result=str(raw_result),
              splats=splats, finished=time.time())
         return result
     except KeyboardInterrupt:
@@ -230,6 +255,7 @@ def run(video, output, preset='office', steps=None, min_registered=12, min_ratio
         emit('failed', detail + ' See pipeline.log and console.log for details.', status='failed', finished=time.time())
         raise
     finally:
+        signal.signal(signal.SIGTERM, previous_handler)
         log.close()
 
 

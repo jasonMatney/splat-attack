@@ -10,6 +10,22 @@ from splat_attack.pipeline import PRESETS, ffmpeg_command, inspect_splat, probe,
 
 
 class PipelineTests(unittest.TestCase):
+    def test_eight_gb_mode_caps_training_but_preserves_reconstruction_resolution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            video = Path(tmp) / 'source.MOV'; video.write_bytes(b'mocked video')
+            output = Path(tmp) / 'run'
+            info = dict(duration=6, width=1920, height=1080, stream_index=0)
+            with patch('splat_attack.pipeline.memory_budget', return_value=8*1024**3), \
+                 patch('splat_attack.pipeline.probe', return_value=info), \
+                 patch('splat_attack.pipeline.tool', return_value='/bin/true'), \
+                 patch('splat_attack.pipeline.subprocess.run', side_effect=RuntimeError('test stops before extraction')):
+                with self.assertRaisesRegex(RuntimeError, 'test stops'):
+                    run(video, output)
+            state = json.loads((output / 'status.json').read_text())
+            self.assertEqual(state['config']['train_resolution'], 768)
+            self.assertEqual(state['config']['resolution'], 1600)
+            self.assertEqual(state['config']['splats'], 250000)
+
     def test_divergent_camera_is_not_chosen_for_training(self):
         def model(focal, distortion):
             return SimpleNamespace(cameras={1:SimpleNamespace(width=900, height=1600, params=[focal,450,800,distortion])})

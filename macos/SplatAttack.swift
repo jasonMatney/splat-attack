@@ -119,9 +119,12 @@ let repo = URL(fileURLWithPath: Bundle.main.object(forInfoDictionaryKey: "SplatR
     }
     func openResult() {
         guard let result else { return }
-        let p = Process(); p.executableURL = repo.appendingPathComponent(".tools/brush/brush_app")
-        p.arguments = [result.path, "--with-viewer"]
-        do { try p.run() } catch { message = error.localizedDescription }
+        let config = NSWorkspace.OpenConfiguration()
+        config.arguments = [result.path, "--with-viewer"]
+        config.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: repo.appendingPathComponent("dist/Brush Viewer.app"), configuration: config) { _, error in
+            if let error { Task { @MainActor in self.message = error.localizedDescription } }
+        }
     }
     func reveal() {
         guard let output else { return }
@@ -170,6 +173,10 @@ struct ContentView: View {
                         }.pickerStyle(.segmented).labelsHidden().disabled(studio.running)
                         Text(studio.preset == "preview" ? "6,000 steps · up to 360 frames · check your capture first" : studio.preset == "office" ? "20,000 steps · up to 900 frames · balanced quality" : "30,000 steps · up to 1,500 frames · uses more memory")
                             .font(.system(size: 13)).foregroundStyle(.secondary)
+                        if ProcessInfo.processInfo.physicalMemory <= 8 * 1024 * 1024 * 1024 {
+                            Text("8 GB Mac: training automatically uses a smaller scene budget to reduce memory use.")
+                                .font(.system(size: 13)).foregroundStyle(accent).fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     HStack {
                         Button(studio.running ? "Reconstructing…" : "Generate interior splat") { studio.start() }

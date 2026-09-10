@@ -22,4 +22,19 @@ codesign --force --deep --sign - "$build_dir/Splat Attack.app"
 # Signing outside synced folders avoids FinderInfo/FileProvider races.
 ditto --norsrc "$build_dir/Splat Attack.app" "dist/Splat Attack.app"
 xattr -cr "dist/Splat Attack.app"
+mkdir -p "$build_dir/Brush Viewer.app/Contents/MacOS" "$build_dir/Brush Viewer.app/Contents/Resources"
+cp .tools/brush/brush_app "$build_dir/Brush Viewer.app/Contents/MacOS/BrushViewer"
+cp .tools/brush/LICENSE "$build_dir/Brush Viewer.app/Contents/Resources/Brush-LICENSE"
+python3 - "$build_dir" <<'PY'
+import plistlib, sys
+from pathlib import Path
+with (Path(sys.argv[1]) / 'Brush Viewer.app/Contents/Info.plist').open('wb') as file:
+    plistlib.dump(dict(CFBundleExecutable='BrushViewer', CFBundleIdentifier='com.splatattack.brushviewer',
+                      CFBundleName='Brush Viewer', CFBundlePackageType='APPL', CFBundleVersion='1',
+                      CFBundleShortVersionString='0.3.0', LSMinimumSystemVersion='14.0',
+                      NSHighResolutionCapable=True), file)
+PY
+codesign --force --deep --sign - "$build_dir/Brush Viewer.app"
+ditto --norsrc "$build_dir/Brush Viewer.app" "dist/Brush Viewer.app"
+xattr -cr "dist/Brush Viewer.app"
 echo 'Built dist/Splat Attack.app'

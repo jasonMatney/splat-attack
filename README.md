@@ -10,6 +10,9 @@ Brush's interactive viewer. Processing does not upload your footage.
 Open **`dist/Splat Attack.app`**, choose an AirDropped video, select **Quick
 preview** or **Office**, then **Generate interior splat**. After training,
 click **Open splat in Brush**. Dragging a video into the window also selects it.
+The build includes a local **Brush Viewer.app** so the viewer opens as a normal
+Mac application. The app opens `office-view.ply`, an oriented copy starting from
+a captured camera viewpoint. `office.ply` preserves the original coordinates.
 
 Keep this checkout in place: the app links to its `.venv`, `.tools`, and `runs`
 directories. If you move the checkout, rebuild the app. This is a local developer
@@ -68,13 +71,18 @@ This produces a visual splat, not a measured BIM model or watertight mesh.
 | Quality gate | Reject implausible focal length/distortion. Require at least 12 registered frames and 60% registration by default; partial coverage is reported. |
 | Prepare | Undistort into a PINHOLE COLMAP dataset that Brush can train. |
 | Train | Brush v0.3.0 on the Mac's Metal GPU. |
-| Export | `exports/office.ply`, validated to contain Gaussian properties, plus source fingerprint and job metadata. |
+| Export | Original `exports/office.ply` plus `office-view.ply` aligned for viewing; source fingerprint, coordinate transform and job metadata. |
 
 | Preset | Frame cap | Longest edge | Training steps | Splat cap |
 |---|---:|---:|---:|---:|
 | Quick preview | 360 | 1280 | 6,000 | 750,000 |
 | Office | 900 | 1600 | 20,000 | 2,000,000 |
 | High detail | 1,500 | 1920 | 30,000 | 4,000,000 |
+
+On a Mac with **8 GB RAM**, training automatically caps image resolution at
+768 px and the splat count at 250,000. Frame extraction and camera reconstruction
+retain the selected preset's resolution. The app and job warnings disclose this
+mode; it reduces fine detail in exchange for a smaller training workload.
 
 Runtime varies with the Mac and capture. The interface reports real pipeline
 stages; it does not invent a percentage or ETA. Plug in the Mac and keep it awake.
@@ -91,7 +99,7 @@ An interrupted job can be inspected but the app does not yet resume training.
 .venv/bin/python -m splat_attack.pipeline doctor
 .venv/bin/python -m splat_attack.pipeline run ~/Downloads/IMG_1234.MOV \
   --output runs/my-office --preset office
-.venv/bin/python -m splat_attack.pipeline view runs/my-office/exports/office.ply
+.venv/bin/python -m splat_attack.pipeline view runs/my-office/exports/office-view.ply
 ```
 
 `--steps` is available for diagnostics. A 20-step test verifies execution, not
@@ -103,6 +111,13 @@ registered frames, selected component, warnings and final PLY path.
 `pipeline.log` contains FFmpeg/Brush command logs; desktop jobs also capture
 COLMAP output in `console.log`. **Runs, videos, trained scenes, dependencies and
 build artifacts are excluded from Git.**
+
+`exports/view-transform.json` records the rigid transform and selected source
+view. The viewing copy rotates Gaussian positions, covariance orientations and
+spherical harmonic coefficients together; it does not modify the underlying
+reconstruction. In Brush, drag to orbit, scroll to adjust distance, Ctrl-drag
+to pan, and use W/A/S/D with Q/E for movement. Right-drag or Space-drag looks
+around from the current position.
 
 The optional **Keep a partial scene** checkbox (`--allow-partial` in the CLI)
 allows training the largest usable component below 60% coverage. It still
