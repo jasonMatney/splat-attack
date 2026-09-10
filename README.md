@@ -78,6 +78,9 @@ This produces a visual splat, not a measured BIM model or watertight mesh.
 
 Runtime varies with the Mac and capture. The interface reports real pipeline
 stages; it does not invent a percentage or ETA. Plug in the Mac and keep it awake.
+Standard presets update `exports/office.ply` every 1,000 steps as a checkpoint.
+While `status.json` is still running or failed, that file is an intermediate
+result; only a completed status confirms the requested training finished.
 The Stop button terminates the job process group and keeps intermediate files.
 Each new run gets a unique folder; existing results are never overwritten.
 An interrupted job can be inspected but the app does not yet resume training.

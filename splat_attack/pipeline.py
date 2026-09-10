@@ -210,10 +210,11 @@ def run(video, output, preset='office', steps=None, min_registered=12, min_ratio
                 file.rename(dataset / 'sparse/0' / file.name)
         exports = output / 'exports'; exports.mkdir()
         emit('train', f"Training {config['steps']:,} steps on your GPU; this can take a while")
+        export_every = 1000 if config['steps'] % 1000 == 0 else config['steps']
         command([brush, str(dataset), '--total-steps', str(config['steps']),
                  '--max-resolution', str(config['resolution']), '--max-splats', str(config['splats']),
                  '--growth-stop-iter', str(max(1, int(config['steps'] * 0.75))),
-                 '--export-every', str(config['steps']), '--export-path', str(exports),
+                 '--export-every', str(export_every), '--export-path', str(exports),
                  '--export-name', 'office.ply'])
         result = exports / 'office.ply'
         splats = inspect_splat(result)
