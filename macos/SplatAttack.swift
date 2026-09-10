@@ -134,6 +134,7 @@ struct ContentView: View {
     @State private var targeted = false
     let steps = [("extract", "Extract frames"), ("features", "Find features"), ("match", "Match views"), ("cameras", "Solve cameras"), ("undistort", "Prepare scene"), ("train", "Train splat")]
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 24) {
             HStack(alignment: .firstTextBaseline) {
                 Text("SPLAT / ATTACK").font(.system(size: 25, weight: .black, design: .monospaced))
@@ -206,11 +207,11 @@ struct ContentView: View {
             HStack(alignment: .top, spacing: 28) {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("A better capture makes a better splat").font(.system(size: 15, weight: .semibold))
-                    Text("Use the 1× lens at 4K / 30 fps. Walk slowly around the room for 1–3 minutes, keeping furniture in view. Revisit your starting point. Keep the lens fixed; avoid standing still and panning.").font(.system(size: 14)).foregroundStyle(.secondary)
+                    Text("Use the 1× lens at 4K / 30 fps. Walk slowly around the room for 1–3 minutes, keeping furniture in view. Revisit your starting point. Keep the lens fixed; avoid standing still and panning.").font(.system(size: 14)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 VStack(alignment: .leading, spacing: 7) {
                     Text("Keep the room still").font(.system(size: 15, weight: .semibold))
-                    Text("Turn lights on. Avoid people moving, mirrors and blank walls. Lock focus/exposure when practical. Standard video works best; avoid Cinematic and Action modes.").font(.system(size: 14)).foregroundStyle(.secondary)
+                    Text("Turn lights on. Avoid people moving, mirrors and blank walls. Lock focus/exposure when practical. Standard video works best; avoid Cinematic and Action modes.").font(.system(size: 14)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
             if !studio.recent.isEmpty {
@@ -220,7 +221,8 @@ struct ContentView: View {
                     }
                 }.disabled(studio.running).frame(width: 245)
             }
-        }.padding(30).frame(minWidth: 890, minHeight: 720).background(Color(red: 0.065, green: 0.073, blue: 0.082))
+        }.padding(30).frame(maxWidth: .infinity, alignment: .leading)
+        }.frame(minWidth: 890, minHeight: 720).background(Color(red: 0.065, green: 0.073, blue: 0.082))
             .preferredColorScheme(.dark)
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in studio.stop() }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in studio.refreshRecent() }
