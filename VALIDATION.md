@@ -27,6 +27,10 @@ Brush v0.3.0, FFmpeg 7.1.1. Native app compiled and launched locally.
   furniture, with blur and artifacts. It does **not** represent a complete,
   clean reconstruction of the office. The native viewer's generic initial
   pose was unsuitable, motivating the separate camera-aligned viewing export.
+- The aligned PLY was then opened in the native viewer and visually checked:
+  lounge chairs, table, plant, floor and wall graphics are recognizable. Blur,
+  floating artifacts and missing coverage remain. No claim of a complete
+  office model or measurement accuracy is made.
 
 The office video, scene files, screenshots, camera database and source paths
 are excluded from Git. A faster, more accurate reconstruction of this full
