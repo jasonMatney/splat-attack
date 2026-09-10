@@ -1,0 +1,12 @@
+.venv/
+.tools/
+.build/
+target/
+dist/
+runs/
+__pycache__/
+.DS_Store
+*.mov
+*.MOV
+*.mp4
+*.ply
